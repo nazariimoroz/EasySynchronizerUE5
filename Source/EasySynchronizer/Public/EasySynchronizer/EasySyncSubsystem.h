@@ -97,9 +97,6 @@ struct EASYSYNCHRONIZER_API FEasyBroadcastParams
 
 	UPROPERTY(BlueprintReadWrite)
 	UObject* Sender = nullptr;
-
-	UPROPERTY(BlueprintReadWrite)
-	FGameplayTag Tag;
 };
 
 

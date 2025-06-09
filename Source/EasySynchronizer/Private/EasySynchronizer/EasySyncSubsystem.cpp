@@ -186,8 +186,8 @@ void UEasySyncSubsystem::Broadcast(UObject* Sender, const FGameplayTag& Tag, FEa
 {
 	auto PrevParams = MoveTemp(LastParams);
 
-	LastParams = Params;
-	BroadcastTag(LastParams.Tag);
+	LastParams = MoveTemp(Params);
+	BroadcastTag(Tag);
 	LastParams = MoveTemp(PrevParams);
 }
 
@@ -218,6 +218,9 @@ void UEasySyncSubsystem::RegisterEntry(TSharedPtr<FEasySyncEntry> SyncEntry)
 	for (auto& WeakSyncKey : SyncEntry->GetKeys())
 	{
 		const auto SyncKey = WeakSyncKey.Pin();
+		if (!SyncKey) continue;
+
+		SyncKey->SetSyncEntry(SyncEntry);
 
 		if (const auto& ConditionHandlerPtr = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&SyncKey->Value))
 		{
@@ -285,11 +288,6 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 {
 	const auto TagParents = Tag.GetGameplayTagParents();
 	const int32 LevelNum = TagParents.Num();
-	if (LevelNum < 1 || LevelNum > 4)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Can't broadcast Tag %s because it's on unknown level"), *Tag.ToString());
-		return;
-	}
 
 	for (const auto& SubTag : TagParents)
 	{

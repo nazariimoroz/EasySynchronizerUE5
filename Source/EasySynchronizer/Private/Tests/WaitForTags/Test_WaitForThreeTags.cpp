@@ -35,7 +35,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 		FTimerHandle TH;
 		World->GetTimerManager().SetTimer(TH, FTimerDelegate::CreateWeakLambda(World, [=]
 		{
-			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("TkSync.Test.Test1"));
+			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test1"));
 			(*CalledCount) += 1;
 
 			if (TestActor->PassCount != 0 && *CalledCount != 3)
@@ -49,7 +49,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 		FTimerHandle TH;
 		World->GetTimerManager().SetTimer(TH, FTimerDelegate::CreateWeakLambda(World, [=]
 		{
-			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("TkSync.Test.Test2"));
+			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test2"));
 			(*CalledCount) += 1;
 
 			if (TestActor->PassCount != 0 && *CalledCount != 3)
@@ -62,7 +62,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 		FTimerHandle TH;
 		World->GetTimerManager().SetTimer(TH, FTimerDelegate::CreateWeakLambda(World, [=]
 		{
-			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("TkSync.Test.Test3"));
+			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test3"));
 			(*CalledCount) += 1;
 
 			if (TestActor->PassCount != 0 && *CalledCount != 3)
@@ -74,7 +74,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 
 	ADD_LATENT_AUTOMATION_COMMAND(EasySyncTest::FDelayedCallbackLatentCommand([=]
 	{
-		UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("TkSync.Test.Test3"));
+		UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test3"));
 
 		if (TestActor->PassCount == 0)
 		{
