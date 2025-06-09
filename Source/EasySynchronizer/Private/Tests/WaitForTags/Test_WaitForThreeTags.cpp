@@ -5,7 +5,7 @@
 #include "EasySynchronizer/EasySyncSubsystem.h"
 #include "Test_WaitForThreeTagsActor.h"
 #include "Tests/Test_EasySyncSubsystemWrapper.h"
-#include "Tests/Test_Tools.h"
+#include "Tests/Test_Utils.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTest_WaitForThreeTags, "EasySynchronizer.Tests.WaitForThreeTags",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -78,7 +78,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 
 		if (TestActor->PassCount == 0)
 		{
-			Test->AddError("WaitFor have note been called");
+			Test->AddError("WaitFor have not been called");
 			return;
 		}
 		if (TestActor->PassCount > 1)

@@ -8,16 +8,22 @@
 
 #include "Test_WaitForConditions_Conditions.generated.h"
 
-class ATest_WaitForConditions_WaiterActor;
+class ATest_WaitForConditions_BroadcastActor;
 
 UCLASS()
 class UTest_Property1Condition : public UEasySyncBaseCondition
 {
 	GENERATED_BODY()
 	EASYSYNC_GENERATED_CONDITION_OneParam(
-		TWeakObjectPtr<ATest_WaitForConditions_WaiterActor>, WaiterActor
+		TWeakObjectPtr<ATest_WaitForConditions_BroadcastActor>, InWaiterActor
 	);
 };
+
+
+namespace EasySyncTest
+{
+	inline bool bSomeGlobalVariable = false;
+}
 
 UCLASS()
 class UTest_GlobalProperty2Condition : public UEasySyncBaseCondition
@@ -25,4 +31,3 @@ class UTest_GlobalProperty2Condition : public UEasySyncBaseCondition
 	GENERATED_BODY()
 	EASYSYNC_GENERATED_CONDITION();
 };
-

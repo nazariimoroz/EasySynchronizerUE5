@@ -7,18 +7,19 @@
 #include "EasySynchronizer/EasySyncSubsystem.h"
 
 
-ATest_WaitForConditions_WaiterActor::ATest_WaitForConditions_WaiterActor()
+void ATest_WaitForConditions_WaiterActor::StartWaiting(ATest_WaitForConditions_BroadcastActor* Property1Handler, ATest_WaitForConditions_BroadcastActor* Property2Handler)
 {
-	PrimaryActorTick.bCanEverTick = true;
+	UEasySyncSubsystem::Get(this)->WaitFor(
+	{
+		UTest_Property1Condition::CheckWith(Property1Handler),
+		UTest_Property1Condition::CheckWith(Property2Handler),
+		UTest_GlobalProperty2Condition::CheckWith()
+	}, FEasySyncDelegate::CreateWeakLambda(this, [this]{OnDoneDelegate.Execute();}));
 }
 
-void ATest_WaitForConditions_WaiterActor::BeginPlay()
+void ATest_WaitForConditions_BroadcastActor::Broadcast()
 {
-	Super::BeginPlay();
-}
-
-void ATest_WaitForConditions_WaiterActor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
+	Property1 = 1;
+	UEasySyncSubsystem::Get(this)->Broadcast<UTest_Property1Condition>(this, {this});
 }
 

@@ -15,6 +15,8 @@ struct FEasySyncEntry;
 
 struct EASYSYNCHRONIZER_API FEasySyncKey
 {
+	friend FEasySyncEntry;
+
 	using FValueType = std::variant<TSharedPtr<FEasySyncConditionHandler>, FGameplayTag>;
 
 	FEasySyncKey(const FGameplayTag& Tag);
@@ -22,8 +24,22 @@ struct EASYSYNCHRONIZER_API FEasySyncKey
 	FEasySyncKey(const TSharedPtr<FEasySyncConditionHandler>& SyncCondition);
 	FEasySyncKey(const FValueType& InValue);
 
+protected:
 	FValueType Value;
+
+public:
+	const TSharedPtr<FEasySyncConditionHandler>* GetValueAsCondition() const;
+	const FGameplayTag* GetValueAsTag() const;
+
+
+protected:
 	bool bPassed = false;
+	void ClearPass() { bPassed = false; }
+	void MarkPassed() { bPassed = true; }
+
+public:
+	bool IsPassed() const { return bPassed; }
+
 
 protected:
 	TWeakPtr<FEasySyncEntry> SyncEntry;
@@ -39,6 +55,7 @@ public:
 	}
 
 
+public:
 	friend uint32 GetTypeHash(const FEasySyncKey& SyncKey);
 	friend uint32 GetTypeHash(const TSharedPtr<FEasySyncKey>& SyncEntry);
 };
@@ -80,14 +97,13 @@ protected:
 public:
 	bool OnlyOnce() const { return bOnlyOnce; }
 
+
 public:
 	bool operator==(const FEasySyncEntry& Other) const;
 
 	friend uint32 GetTypeHash(const FEasySyncEntry& SyncEntry);
 	friend uint32 GetTypeHash(const TSharedPtr<FEasySyncEntry>& SyncEntry);
 };
-
-
 
 
 USTRUCT(Blueprintable, BlueprintType)
@@ -98,8 +114,6 @@ struct EASYSYNCHRONIZER_API FEasyBroadcastParams
 	UPROPERTY(BlueprintReadWrite)
 	UObject* Sender = nullptr;
 };
-
-
 
 
 /**

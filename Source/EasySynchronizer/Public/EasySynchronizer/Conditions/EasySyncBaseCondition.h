@@ -76,11 +76,9 @@ class EASYSYNCHRONIZER_API UEasySyncBaseCondition : public UObject
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintNativeEvent)
-	EEasySyncConditionStatus ConditionStatus(const FEasySyncBaseConditionData& Data);
+	virtual EEasySyncConditionStatus ConditionStatus(const FEasySyncBaseConditionData& Data);
 
 protected:
-	virtual EEasySyncConditionStatus ConditionStatus_Implementation(const FEasySyncBaseConditionData& Data);
 
 	template<class T>
 	const T* CastConditionData(const FEasySyncBaseConditionData& Data)

@@ -20,7 +20,7 @@
 	\
 	protected: \
 		\
-		virtual EEasySyncConditionStatus ConditionStatus_Implementation(const FEasySyncBaseConditionData& Data) override \
+		virtual EEasySyncConditionStatus ConditionStatus(const FEasySyncBaseConditionData& Data) override \
 		{ \
 			const auto CastedData = CastConditionData<FConditionDataType>(Data); \
 			if(!CastedData) return EEasySyncConditionStatus::Error; \
@@ -64,7 +64,7 @@
 	\
 	protected: \
 		\
-		virtual EEasySyncConditionStatus ConditionStatus_Implementation(const FEasySyncBaseConditionData& Data) override \
+		virtual EEasySyncConditionStatus ConditionStatus(const FEasySyncBaseConditionData& Data) override \
 		{ \
 			const auto CastedData = CastConditionData<FConditionDataType>(Data); \
 			if(!CastedData) return EEasySyncConditionStatus::Error; \

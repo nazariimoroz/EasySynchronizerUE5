@@ -31,7 +31,7 @@ uint32 GetTypeHash(const FEasySyncConditionHandler& SyncKey)
 }
 
 
-EEasySyncConditionStatus UEasySyncBaseCondition::ConditionStatus_Implementation(const FEasySyncBaseConditionData& Data)
+EEasySyncConditionStatus UEasySyncBaseCondition::ConditionStatus(const FEasySyncBaseConditionData& Data)
 {
 	return EEasySyncConditionStatus::Error;
 }

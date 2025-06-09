@@ -6,17 +6,27 @@
 #include "Runtime/Engine/Classes/GameFramework/Actor.h"
 #include "Test_WaitForConditions_Actors.generated.h"
 
+class ATest_WaitForConditions_BroadcastActor;
+
 UCLASS()
 class ATest_WaitForConditions_WaiterActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	ATest_WaitForConditions_WaiterActor();
+	void StartWaiting(ATest_WaitForConditions_BroadcastActor* Property1Handler, ATest_WaitForConditions_BroadcastActor* Property2Handler);
 
-protected:
-	virtual void BeginPlay() override;
-
-public:
-	virtual void Tick(float DeltaTime) override;
+	DECLARE_DELEGATE(FOnDoneDelegate);
+	FOnDoneDelegate OnDoneDelegate;
 };
+
+UCLASS()
+class ATest_WaitForConditions_BroadcastActor : public AActor
+{
+	GENERATED_BODY()
+public:
+	void Broadcast();
+
+	int Property1 = 0;
+};
+

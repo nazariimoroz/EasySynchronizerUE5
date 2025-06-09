@@ -24,6 +24,24 @@ FEasySyncKey::FEasySyncKey(const FValueType& InValue)
 	Value = InValue;
 }
 
+const TSharedPtr<FEasySyncConditionHandler>* FEasySyncKey::GetValueAsCondition() const
+{
+	if (const auto SyncCondition = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&Value))
+	{
+		return SyncCondition;
+	}
+	return nullptr;
+}
+
+const FGameplayTag* FEasySyncKey::GetValueAsTag() const
+{
+	if (const auto Tag = std::get_if<FGameplayTag>(&Value))
+	{
+		return Tag;
+	}
+	return nullptr;
+}
+
 uint32 GetTypeHash(const FEasySyncKey& SyncKey)
 {
 	if (const auto SyncCondition = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&SyncKey.Value))
@@ -48,7 +66,7 @@ uint32 GetTypeHash(const TSharedPtr<FEasySyncKey>& SyncEntry)
 
 
 TSharedPtr<FEasySyncEntry> FEasySyncEntry::Create(TArray<FEasySyncKey>&& InKeys, FDelegateType&& InDelegate,
-                                                bool bInOnlyOnce)
+                                                  bool bInOnlyOnce)
 {
 	auto SyncEntry = MakeShared<FEasySyncEntry>();
 	SyncEntry->SetKeys(MoveTemp(InKeys));
@@ -83,7 +101,7 @@ bool FEasySyncEntry::IsAllKeyPassed() const
 {
 	for (const auto& Key : Keys)
 	{
-		if (!Key->bPassed) return false;
+		if (!Key->IsPassed()) return false;
 	}
 	return true;
 }
@@ -92,7 +110,7 @@ void FEasySyncEntry::ClearPasses()
 {
 	for (auto& Key : Keys)
 	{
-		Key->bPassed = false;
+		Key->ClearPass();
 	}
 }
 
@@ -102,7 +120,7 @@ void FEasySyncEntry::MarkKeyAsPassed(const TSharedRef<FEasySyncKey>& InSyncKey)
 	{
 		if (SyncKey == InSyncKey)
 		{
-			SyncKey->bPassed = true;
+			SyncKey->MarkPassed();
 		}
 	}
 }
@@ -154,7 +172,6 @@ uint32 GetTypeHash(const TSharedPtr<FEasySyncEntry>& SyncEntry)
 	}
 	return GetTypeHash(*SyncEntry);
 }
-
 
 
 void UEasySyncSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -222,7 +239,7 @@ void UEasySyncSubsystem::RegisterEntry(TSharedPtr<FEasySyncEntry> SyncEntry)
 
 		SyncKey->SetSyncEntry(SyncEntry);
 
-		if (const auto& ConditionHandlerPtr = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&SyncKey->Value))
+		if (const auto& ConditionHandlerPtr = SyncKey->GetValueAsCondition())
 		{
 			const auto ConditionHandler = ConditionHandlerPtr->Get();
 			Hash_SyncConditions.Add(GetTypeHash(*ConditionHandler), WeakSyncKey);
@@ -231,18 +248,16 @@ void UEasySyncSubsystem::RegisterEntry(TSharedPtr<FEasySyncEntry> SyncEntry)
 			switch (ConditionHandler->ConditionStatus())
 			{
 			case EEasySyncConditionStatus::Pass:
-				SyncKey->bPassed = true;
+				SyncEntry->MarkKeyAsPassed(SyncKey.ToSharedRef());
 				break;
 			case EEasySyncConditionStatus::Wait:
-				SyncKey->bPassed = false;
 				break;
 			default:
 				UE_LOG(LogTemp, Warning, TEXT("TODO"));
 				return;
 			}
-
 		}
-		else if (const auto& TagKeyPtr = std::get_if<FGameplayTag>(&SyncKey->Value))
+		else if (const auto& TagKeyPtr = SyncKey->GetValueAsTag())
 		{
 			SyncTags[TagKeyPtr->GetGameplayTagParents().Num()].Add(*TagKeyPtr, WeakSyncKey);
 		}
@@ -268,14 +283,14 @@ void UEasySyncSubsystem::RemoveEntry(TSharedPtr<FEasySyncEntry>&& SyncEntry)
 	{
 		const auto SyncKey = WeakSyncKey.Pin();
 
-		if (const auto& ConditionHandlerPtr = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&SyncKey->Value))
+		if (const auto& ConditionHandlerPtr = SyncKey->GetValueAsCondition())
 		{
 			const auto ConditionHandler = ConditionHandlerPtr->Get();
 
-			Hash_SyncConditions.Remove(GetTypeHash(*ConditionHandler), WeakSyncKey);
-			Class_SyncConditions.Remove(ConditionHandler->ConditionClass, WeakSyncKey);
+			Hash_SyncConditions.RemoveSingle(GetTypeHash(*ConditionHandler), WeakSyncKey);
+			Class_SyncConditions.RemoveSingle(ConditionHandler->ConditionClass, WeakSyncKey);
 		}
-		else if (const auto& TagKeyPtr = std::get_if<FGameplayTag>(&SyncKey->Value))
+		else if (const auto& TagKeyPtr = SyncKey->GetValueAsTag())
 		{
 			SyncTags[TagKeyPtr->GetGameplayTagParents().Num()].RemoveSingle(*TagKeyPtr, WeakSyncKey);
 		}
@@ -312,6 +327,7 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 			if (TryExecuteEntry(SyncEntry))
 			{
 				RemoveEntry(MoveTemp(SyncEntry));
+				break;
 			}
 		}
 	}
@@ -319,14 +335,12 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 
 void UEasySyncSubsystem::BroadcastConditionByHint(uint32 Hash)
 {
-	TArray<TWeakPtr<FEasySyncKey>*> WeakConditionSyncKeys;
-	Hash_SyncConditions.MultiFindPointer(Hash, WeakConditionSyncKeys);
+	TArray<TWeakPtr<FEasySyncKey>> WeakConditionSyncKeys;
+	Hash_SyncConditions.MultiFind(Hash, WeakConditionSyncKeys);
 
 	for (const auto& WeakConditionSyncKey : WeakConditionSyncKeys)
 	{
-		if (!WeakConditionSyncKey) continue;
-
-		const auto ConditionSyncKey = WeakConditionSyncKey->Pin();
+		const auto ConditionSyncKey = WeakConditionSyncKey.Pin();
 		if (!ConditionSyncKey)
 		{
 			UE_LOG(LogTemp, Error, TEXT("SyncKey is not valid anymore. It is very uncommon situation"));
@@ -339,11 +353,19 @@ void UEasySyncSubsystem::BroadcastConditionByHint(uint32 Hash)
 			continue;
 		}
 
-		SyncEntry->MarkKeyAsPassed(ConditionSyncKey.ToSharedRef());
+		const auto Condition = ConditionSyncKey->GetValueAsCondition();
+		if (!Condition) continue;
 
-		if (TryExecuteEntry(SyncEntry))
+		const auto ConditionStatus = (*Condition)->ConditionStatus();
+		if (ConditionStatus == EEasySyncConditionStatus::Pass)
 		{
-			RemoveEntry(MoveTemp(SyncEntry));
+			SyncEntry->MarkKeyAsPassed(ConditionSyncKey.ToSharedRef());
+
+			if (TryExecuteEntry(SyncEntry))
+			{
+				RemoveEntry(MoveTemp(SyncEntry));
+				break;
+			}
 		}
 	}
 }
@@ -355,8 +377,6 @@ void UEasySyncSubsystem::BroadcastConditionNoHint(const TSubclassOf<UEasySyncBas
 
 	for (const auto& WeakConditionSyncKey : WeakConditionSyncKeys)
 	{
-		if (!WeakConditionSyncKey) continue;
-
 		const auto ConditionSyncKey = WeakConditionSyncKey->Pin();
 		if (!ConditionSyncKey)
 		{
@@ -370,11 +390,19 @@ void UEasySyncSubsystem::BroadcastConditionNoHint(const TSubclassOf<UEasySyncBas
 			continue;
 		}
 
-		SyncEntry->MarkKeyAsPassed(ConditionSyncKey.ToSharedRef());
+		const auto Condition = ConditionSyncKey->GetValueAsCondition();
+		if (!Condition) continue;
 
-		if (TryExecuteEntry(SyncEntry))
+		const auto ConditionStatus = (*Condition)->ConditionStatus();
+		if (ConditionStatus == EEasySyncConditionStatus::Pass)
 		{
-			RemoveEntry(MoveTemp(SyncEntry));
+			SyncEntry->MarkKeyAsPassed(ConditionSyncKey.ToSharedRef());
+
+			if (TryExecuteEntry(SyncEntry))
+			{
+				RemoveEntry(MoveTemp(SyncEntry));
+				break;
+			}
 		}
 	}
 }
