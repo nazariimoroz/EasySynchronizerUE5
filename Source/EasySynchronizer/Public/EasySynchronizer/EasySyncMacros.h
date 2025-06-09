@@ -32,7 +32,7 @@
 		EEasySyncConditionStatus ConditionStatusInternal();
 
 
-#define EASYSYNC_GENERATED_CONDITION_OneParam(PARAM1_TYPE, PARAM1_NAME) \
+#define EASYSYNC_GENERATED_CONDITION_CUSTOMHASH_OneParam(PARAM1_TYPE, PARAM1_NAME) \
 	public: \
 		struct FConditionDataType : public FEasySyncBaseConditionData \
 		{ \
@@ -48,9 +48,7 @@
 			\
 			PARAM1_TYPE PARAM1_NAME; \
 			\
-			uint32 GetHash() const { \
-				return GetTypeHash(PARAM1_NAME); \
-			} \
+			uint32 GetHash() const override; \
 		}; \
 	\
 	public: \

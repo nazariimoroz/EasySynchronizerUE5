@@ -46,11 +46,11 @@ uint32 GetTypeHash(const FEasySyncKey& SyncKey)
 {
 	if (const auto SyncCondition = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&SyncKey.Value))
 	{
-		return GetTypeHash(*SyncCondition);
+		return GetTypeHash(**SyncCondition);
 	}
 	if (const auto Tag = std::get_if<FGameplayTag>(&SyncKey.Value))
 	{
-		return GetTypeHash(Tag);
+		return GetTypeHash(*Tag);
 	}
 	return 0;
 }
@@ -154,11 +154,11 @@ uint32 GetTypeHash(const FEasySyncEntry& SyncEntry)
 
 	if (const auto PureDelegate = std::get_if<FEasySyncDelegate>(&SyncEntry.Delegate))
 	{
-		Hash = HashCombine(Hash, GetTypeHash(PureDelegate));
+		Hash = HashCombine(Hash, GetTypeHash(*PureDelegate));
 	}
 	else if (const auto DynamicDelegate = std::get_if<FEasySyncDynamicDelegate>(&SyncEntry.Delegate))
 	{
-		Hash = HashCombine(Hash, GetTypeHash(DynamicDelegate));
+		Hash = HashCombine(Hash, GetTypeHash(*DynamicDelegate));
 	}
 
 	return Hash;
@@ -310,11 +310,8 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 		for (const auto WeakSyncKey : SynkKeys)
 		{
 			const auto TagSyncKey = WeakSyncKey.Pin();
-			if (!TagSyncKey)
-			{
-				UE_LOG(LogTemp, Error, TEXT("SyncKey is not valid anymore. It is very uncommon situation"));
-				continue;
-			}
+			if (!TagSyncKey || TagSyncKey->IsPassed()) continue;
+
 			auto SyncEntry = TagSyncKey->GetSyncEntry();
 			if (!SyncEntry)
 			{
@@ -327,7 +324,6 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 			if (TryExecuteEntry(SyncEntry))
 			{
 				RemoveEntry(MoveTemp(SyncEntry));
-				break;
 			}
 		}
 	}
@@ -341,11 +337,8 @@ void UEasySyncSubsystem::BroadcastConditionByHint(uint32 Hash)
 	for (const auto& WeakConditionSyncKey : WeakConditionSyncKeys)
 	{
 		const auto ConditionSyncKey = WeakConditionSyncKey.Pin();
-		if (!ConditionSyncKey)
-		{
-			UE_LOG(LogTemp, Error, TEXT("SyncKey is not valid anymore. It is very uncommon situation"));
-			continue;
-		}
+		if (!ConditionSyncKey || ConditionSyncKey->IsPassed()) continue;
+
 		auto SyncEntry = ConditionSyncKey->GetSyncEntry();
 		if (!SyncEntry)
 		{
@@ -364,7 +357,6 @@ void UEasySyncSubsystem::BroadcastConditionByHint(uint32 Hash)
 			if (TryExecuteEntry(SyncEntry))
 			{
 				RemoveEntry(MoveTemp(SyncEntry));
-				break;
 			}
 		}
 	}
@@ -378,11 +370,8 @@ void UEasySyncSubsystem::BroadcastConditionNoHint(const TSubclassOf<UEasySyncBas
 	for (const auto& WeakConditionSyncKey : WeakConditionSyncKeys)
 	{
 		const auto ConditionSyncKey = WeakConditionSyncKey->Pin();
-		if (!ConditionSyncKey)
-		{
-			UE_LOG(LogTemp, Error, TEXT("SyncKey is not valid anymore. It is very uncommon situation"));
-			continue;
-		}
+		if (!ConditionSyncKey || ConditionSyncKey->IsPassed()) continue;
+
 		auto SyncEntry = ConditionSyncKey->GetSyncEntry();
 		if (!SyncEntry)
 		{
@@ -401,7 +390,6 @@ void UEasySyncSubsystem::BroadcastConditionNoHint(const TSubclassOf<UEasySyncBas
 			if (TryExecuteEntry(SyncEntry))
 			{
 				RemoveEntry(MoveTemp(SyncEntry));
-				break;
 			}
 		}
 	}

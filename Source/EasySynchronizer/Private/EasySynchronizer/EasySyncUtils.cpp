@@ -14,3 +14,8 @@ bool operator==(const FEasySyncDelegate& Left, const FEasySyncDelegate& Right)
 
 	return LObject == RObject && LMethodName == RMethodName;
 }
+
+uint32 GetTypeHash(const FEasySyncDelegate& Key)
+{
+	return FCrc::MemCrc_DEPRECATED(&Key,sizeof(Key));
+}

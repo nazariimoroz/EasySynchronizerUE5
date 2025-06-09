@@ -14,9 +14,8 @@ UCLASS()
 class UTest_Property1Condition : public UEasySyncBaseCondition
 {
 	GENERATED_BODY()
-	EASYSYNC_GENERATED_CONDITION_OneParam(
-		TWeakObjectPtr<ATest_WaitForConditions_BroadcastActor>, InWaiterActor
-	);
+	EASYSYNC_GENERATED_CONDITION_CUSTOMHASH_OneParam(
+		TWeakObjectPtr<ATest_WaitForConditions_BroadcastActor>, WaiterActor);
 };
 
 

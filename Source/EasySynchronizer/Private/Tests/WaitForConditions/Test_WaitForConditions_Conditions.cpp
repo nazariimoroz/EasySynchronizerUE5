@@ -9,13 +9,17 @@ EEasySyncConditionStatus UTest_Property1Condition::ConditionStatusInternal(const
 {
 	if (!WaiterActor.IsValid()) return EEasySyncConditionStatus::Error;
 
-	UE_LOG(LogTemp, Warning, TEXT("WA: %lld | %i"), reinterpret_cast<intptr_t>(WaiterActor.Get()), WaiterActor->Property1)
 	return WaiterActor->Property1 == 1 ? EEasySyncConditionStatus::Pass : EEasySyncConditionStatus::Wait;
 }
 
+uint32 UTest_Property1Condition::FConditionDataType::GetHash() const
+{
+	return GetTypeHash(WaiterActor.Get());
+}
+
+
 EEasySyncConditionStatus UTest_GlobalProperty2Condition::ConditionStatusInternal()
 {
-	UE_LOG(LogTemp, Warning, TEXT("EasySyncTest::bSomeGlobalVariable | %i"), (int)EasySyncTest::bSomeGlobalVariable);
 	return EasySyncTest::bSomeGlobalVariable ? EEasySyncConditionStatus::Pass : EEasySyncConditionStatus::Wait;
 }
 
