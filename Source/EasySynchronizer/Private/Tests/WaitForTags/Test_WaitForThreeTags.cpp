@@ -38,7 +38,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test1"));
 			(*CalledCount) += 1;
 
-			if (TestActor->PassCount != 0 && *CalledCount != 3)
+			if (TestActor->PassCount != 0 && *CalledCount != 4)
 			{
 				Test->AddError(FString::Printf(TEXT("WaitFor have been passed only after %i tag"), *CalledCount));
 			}
@@ -52,7 +52,7 @@ bool FTest_WaitForThreeTags_Test1::Update()
 			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test2"));
 			(*CalledCount) += 1;
 
-			if (TestActor->PassCount != 0 && *CalledCount != 3)
+			if (TestActor->PassCount != 0 && *CalledCount != 4)
 			{
 				Test->AddError(FString::Printf(TEXT("WaitFor have been passed only after %i tag"), *CalledCount));
 			}
@@ -65,7 +65,28 @@ bool FTest_WaitForThreeTags_Test1::Update()
 			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test3"));
 			(*CalledCount) += 1;
 
-			if (TestActor->PassCount != 0 && *CalledCount != 3)
+			if (TestActor->PassCount != 0 && *CalledCount != 4)
+			{
+				Test->AddError(FString::Printf(TEXT("WaitFor have been passed only after %i tag"), *CalledCount));
+			}
+		}), FMath::RandRange(0.2f, 1.f), false);
+	}
+
+	{
+		FTimerHandle TH;
+		World->GetTimerManager().SetTimer(TH, FTimerDelegate::CreateWeakLambda(World, [=]
+		{
+			UEasySyncSubsystem::Get(World)->Broadcast(World, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test4"));
+			UEasySyncSubsystem::Get(World)->Broadcast(nullptr, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test4"));
+			if (TestActor->PassCount != 0)
+			{
+				Test->AddError(FString::Printf(TEXT("WaitFor have been passed after calling OwnedGameplayTag with different owner")));
+				return;
+			}
+
+			UEasySyncSubsystem::Get(World)->Broadcast(TestActor, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test4"));
+			(*CalledCount) += 1;
+			if (TestActor->PassCount != 0 && *CalledCount != 4)
 			{
 				Test->AddError(FString::Printf(TEXT("WaitFor have been passed only after %i tag"), *CalledCount));
 			}

@@ -17,6 +17,7 @@ void ATest_WaitForThreeTagsActor::Execute()
 		FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test1"),
 		FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test2"),
 		FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test3"),
+		{ this, FGameplayTag::RequestGameplayTag("EasySynchronizer.Test.Test4") }
 	}, FEasySyncDelegate::CreateUObject(this, &ThisClass::Passed));
 }
 

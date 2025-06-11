@@ -11,17 +11,55 @@
 #include "Runtime/Engine/Public/Subsystems/WorldSubsystem.h"
 #include "EasySyncSubsystem.generated.h"
 
+
+USTRUCT(BlueprintType)
+struct FOwnedGameplayTag
+{
+	GENERATED_BODY()
+
+public:
+	FOwnedGameplayTag() = default;
+	FOwnedGameplayTag(UObject* InOwner, const FGameplayTag& InTag)
+		: Owner(InOwner)
+		, Tag(InTag)
+	{}
+
+protected:
+	TWeakObjectPtr<UObject> Owner;
+	FGameplayTag Tag;
+
+public:
+	UObject* GetOwner() const { return Owner.Get(); }
+	FGameplayTag GetTag() const { return Tag; }
+
+
+public:
+	friend uint32 GetTypeHash(const FOwnedGameplayTag& SyncKey)
+	{
+		uint32 Hash = GetTypeHash(SyncKey.GetOwner());
+		Hash = HashCombine(Hash, GetTypeHash(SyncKey.GetTag()));
+		return Hash;
+	}
+};
+
+
 struct FEasySyncEntry;
 
 struct EASYSYNCHRONIZER_API FEasySyncKey
 {
 	friend FEasySyncEntry;
 
-	using FValueType = std::variant<TSharedPtr<FEasySyncConditionHandler>, FGameplayTag>;
+	using FValueType = std::variant<TSharedPtr<FEasySyncConditionHandler>, FGameplayTag, FOwnedGameplayTag>;
 
 	FEasySyncKey(const FGameplayTag& Tag);
 	FEasySyncKey(const FNativeGameplayTag& Tag);
+
 	FEasySyncKey(const TSharedPtr<FEasySyncConditionHandler>& SyncCondition);
+	FEasySyncKey(const FEasySyncConditionHandlerBPWrapper& SyncCondition);
+
+	FEasySyncKey(const FOwnedGameplayTag& OwnedTag);
+	FEasySyncKey(UObject* TagOwner, const FGameplayTag& Tag);
+
 	FEasySyncKey(const FValueType& InValue);
 
 protected:
@@ -30,6 +68,7 @@ protected:
 public:
 	const TSharedPtr<FEasySyncConditionHandler>* GetValueAsCondition() const;
 	const FGameplayTag* GetValueAsTag() const;
+	const FOwnedGameplayTag* GetValueAsOwnedTag() const;
 
 
 protected:
@@ -201,7 +240,10 @@ public:
 		           typename TCondition::FConditionDataType&& Hint,
 		           FEasyBroadcastParams Params = {})
 	{
+		auto PrevParams = std::exchange(LastParams, Params);
+		LastParams.Sender = Sender;
 		BroadcastConditionByHint(FEasySyncConditionHandler::GetHashFrom(TCondition::StaticClass(), Hint));
+		LastParams = MoveTemp(PrevParams);
 	}
 
 	template<class TCondition>
@@ -219,16 +261,21 @@ public:
 			);
 		}
 
+		auto PrevParams = std::exchange(LastParams, Params);
+		LastParams.Sender = Sender;
 		BroadcastConditionNoHint(TCondition::StaticClass());
+		LastParams = MoveTemp(PrevParams);
 	}
 
-	void WaitFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncDelegate&& SyncDelegate);
-	void SubscribeFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncDelegate&& SyncDelegate);
+
+	void WaitFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncEntry::FDelegateType&& SyncDelegate);
+	void SubscribeFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncEntry::FDelegateType&& SyncDelegate);
 
 protected:
 	void RegisterEntry(TSharedPtr<FEasySyncEntry> SyncEntry);
 	void RemoveEntry(TSharedPtr<FEasySyncEntry>&& SyncEntry);
 	void BroadcastTag(const FGameplayTag& Tag);
+	void BroadcastTagWithOwner(UObject* TagOwner, const FGameplayTag& Tag);
 	void BroadcastConditionByHint(uint32 Hash);
 	void BroadcastConditionNoHint(const TSubclassOf<UEasySyncBaseCondition>& ConditionClass);
 
@@ -242,8 +289,10 @@ protected:
 
 	TMap<int32/** Level */, TMultiMap<FGameplayTag, TWeakPtr<FEasySyncKey>>> SyncTags;
 
-	TMultiMap<uint32/*hash*/, TWeakPtr<FEasySyncKey>> Hash_SyncConditions;
+	TMultiMap<uint32/* Hash */, TWeakPtr<FEasySyncKey>> Hash_SyncConditions;
 	TMultiMap<TSubclassOf<UEasySyncBaseCondition>, TWeakPtr<FEasySyncKey>> Class_SyncConditions;
+
+	TMultiMap<uint32/** Hash */, TWeakPtr<FEasySyncKey>> Hash_OwnedSyncTags;
 
 private:
 	FEasyBroadcastParams LastParams;

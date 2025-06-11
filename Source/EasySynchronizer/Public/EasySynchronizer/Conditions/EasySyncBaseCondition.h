@@ -7,6 +7,7 @@
 #include "EasySynchronizer/EasySyncUtils.h"
 #include "EasySyncBaseCondition.generated.h"
 
+struct FEasySyncConditionHandler;
 struct FEasySyncBaseConditionData;
 class UEasySyncBaseCondition;
 struct FEasySyncEntry;
@@ -21,7 +22,6 @@ struct TEasySyncConditionOptionsBase
 	};
 };
 
-
 template<class T>
 struct TEasySyncConditionOptions : TEasySyncConditionOptionsBase<T> {};
 
@@ -29,6 +29,15 @@ namespace EasySync
 {
 	inline struct FEasySyncNoConditionHint {} NoConditionHint;
 }
+
+
+USTRUCT(BlueprintType)
+struct EASYSYNCHRONIZER_API FEasySyncConditionHandlerBPWrapper
+{
+	GENERATED_BODY()
+
+	TSharedPtr<FEasySyncConditionHandler> Handler;
+};
 
 /**
  * One instance of handler to one instance data

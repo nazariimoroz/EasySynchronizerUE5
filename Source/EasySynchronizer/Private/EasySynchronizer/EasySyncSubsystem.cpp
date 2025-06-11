@@ -19,6 +19,21 @@ FEasySyncKey::FEasySyncKey(const TSharedPtr<FEasySyncConditionHandler>& SyncCond
 	Value = SyncCondition;
 }
 
+FEasySyncKey::FEasySyncKey(const FEasySyncConditionHandlerBPWrapper& SyncCondition)
+{
+	Value = SyncCondition.Handler;
+}
+
+FEasySyncKey::FEasySyncKey(const FOwnedGameplayTag& OwnedTag)
+{
+	Value = OwnedTag;
+}
+
+FEasySyncKey::FEasySyncKey(UObject* TagOwner, const FGameplayTag& Tag)
+{
+	Value = FOwnedGameplayTag(TagOwner, Tag);
+}
+
 FEasySyncKey::FEasySyncKey(const FValueType& InValue)
 {
 	Value = InValue;
@@ -42,6 +57,15 @@ const FGameplayTag* FEasySyncKey::GetValueAsTag() const
 	return nullptr;
 }
 
+const FOwnedGameplayTag* FEasySyncKey::GetValueAsOwnedTag() const
+{
+	if (const auto OwnedTag = std::get_if<FOwnedGameplayTag>(&Value))
+	{
+		return OwnedTag;
+	}
+	return nullptr;
+}
+
 uint32 GetTypeHash(const FEasySyncKey& SyncKey)
 {
 	if (const auto SyncCondition = std::get_if<TSharedPtr<FEasySyncConditionHandler>>(&SyncKey.Value))
@@ -51,6 +75,10 @@ uint32 GetTypeHash(const FEasySyncKey& SyncKey)
 	if (const auto Tag = std::get_if<FGameplayTag>(&SyncKey.Value))
 	{
 		return GetTypeHash(*Tag);
+	}
+	if (const auto OwnedTag = std::get_if<FOwnedGameplayTag>(&SyncKey.Value))
+	{
+		return GetTypeHash(*OwnedTag);
 	}
 	return 0;
 }
@@ -201,20 +229,20 @@ UEasySyncSubsystem* UEasySyncSubsystem::Get(const UObject* const ContextObject)
 
 void UEasySyncSubsystem::Broadcast(UObject* Sender, const FGameplayTag& Tag, FEasyBroadcastParams Params)
 {
-	auto PrevParams = MoveTemp(LastParams);
-
-	LastParams = MoveTemp(Params);
+	auto PrevParams = std::exchange(LastParams, Params);
+	LastParams.Sender = Sender;
 	BroadcastTag(Tag);
+	BroadcastTagWithOwner(Sender, Tag);
 	LastParams = MoveTemp(PrevParams);
 }
 
-void UEasySyncSubsystem::WaitFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncDelegate&& SyncDelegate)
+void UEasySyncSubsystem::WaitFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncEntry::FDelegateType&& SyncDelegate)
 {
 	auto Entry = FEasySyncEntry::Create(MoveTemp(SyncKeys), MoveTemp(SyncDelegate), true);
 	RegisterEntry(MoveTemp(Entry));
 }
 
-void UEasySyncSubsystem::SubscribeFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncDelegate&& SyncDelegate)
+void UEasySyncSubsystem::SubscribeFor(TArray<FEasySyncKey>&& SyncKeys, FEasySyncEntry::FDelegateType&& SyncDelegate)
 {
 	auto Entry = FEasySyncEntry::Create(MoveTemp(SyncKeys), MoveTemp(SyncDelegate), false);
 	RegisterEntry(MoveTemp(Entry));
@@ -261,6 +289,10 @@ void UEasySyncSubsystem::RegisterEntry(TSharedPtr<FEasySyncEntry> SyncEntry)
 		{
 			SyncTags[TagKeyPtr->GetGameplayTagParents().Num()].Add(*TagKeyPtr, WeakSyncKey);
 		}
+		else if (const auto& OwnedTagKeyPtr = SyncKey->GetValueAsOwnedTag())
+		{
+			Hash_OwnedSyncTags.Add(GetTypeHash(*OwnedTagKeyPtr), WeakSyncKey);
+		}
 	}
 
 	if (/** bRemove */ TryExecuteEntry(SyncEntry))
@@ -294,6 +326,10 @@ void UEasySyncSubsystem::RemoveEntry(TSharedPtr<FEasySyncEntry>&& SyncEntry)
 		{
 			SyncTags[TagKeyPtr->GetGameplayTagParents().Num()].RemoveSingle(*TagKeyPtr, WeakSyncKey);
 		}
+		else if (const auto& OwnedTagKeyPtr = SyncKey->GetValueAsOwnedTag())
+		{
+			Hash_OwnedSyncTags.Remove(GetTypeHash(&OwnedTagKeyPtr), WeakSyncKey);
+		}
 	}
 
 	EntriesSet.Remove(SyncEntry);
@@ -306,8 +342,8 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 
 	for (const auto& SubTag : TagParents)
 	{
-		const auto SynkKeys = GetSyncKeysByTag(SubTag);
-		for (const auto WeakSyncKey : SynkKeys)
+		const auto SyncKeys = GetSyncKeysByTag(SubTag);
+		for (const auto WeakSyncKey : SyncKeys)
 		{
 			const auto TagSyncKey = WeakSyncKey.Pin();
 			if (!TagSyncKey || TagSyncKey->IsPassed()) continue;
@@ -325,6 +361,34 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 			{
 				RemoveEntry(MoveTemp(SyncEntry));
 			}
+		}
+	}
+}
+
+void UEasySyncSubsystem::BroadcastTagWithOwner(UObject* TagOwner, const FGameplayTag& Tag)
+{
+	TArray<TWeakPtr<FEasySyncKey>> WeakConditionOwnedSyncKeys;
+	Hash_OwnedSyncTags.MultiFind(GetTypeHash(FOwnedGameplayTag(TagOwner, Tag)), WeakConditionOwnedSyncKeys);
+
+	for (const auto WeakSyncKey : WeakConditionOwnedSyncKeys)
+	{
+		const auto OwnedTagSyncKey = WeakSyncKey.Pin();
+		if (!OwnedTagSyncKey) continue;
+
+		if (!OwnedTagSyncKey || OwnedTagSyncKey->IsPassed()) continue;
+
+		auto SyncEntry = OwnedTagSyncKey->GetSyncEntry();
+		if (!SyncEntry)
+		{
+			UE_LOG(LogTemp, Error, TEXT("SyncEntry is not valid anymore. It is very uncommon situation"));
+			continue;
+		}
+
+		SyncEntry->MarkKeyAsPassed(OwnedTagSyncKey.ToSharedRef());
+
+		if (TryExecuteEntry(SyncEntry))
+		{
+			RemoveEntry(MoveTemp(SyncEntry));
 		}
 	}
 }
