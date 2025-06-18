@@ -8,19 +8,9 @@ public class EasySynchronizer : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
-		PublicIncludePaths.AddRange(
-			new string[] {
-				"Public/EasySynchronizer/"
-			}
-			);
-				
-		
-		PrivateIncludePaths.AddRange(
-			new string[] {
-			}
-			);
-			
-		
+		PublicIncludePaths.AddRange(new string[] {} );
+		PrivateIncludePaths.AddRange(new string[] {} );
+
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -37,8 +27,7 @@ public class EasySynchronizer : ModuleRules
 			new string[]
 			{
 				"CoreUObject",
-				"Engine",
-				"UnrealEd"
+				"Engine"
 			}
 			);
 

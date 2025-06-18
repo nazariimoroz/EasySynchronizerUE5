@@ -19,6 +19,11 @@
 			"Name": "EasySynchronizer",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "EasySynchronizerTests",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
 		}
 	]
 }

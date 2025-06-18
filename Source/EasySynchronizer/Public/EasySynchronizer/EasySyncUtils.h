@@ -8,7 +8,6 @@
 /** Delegates */
 
 using FEasySyncDelegate = TDelegate<void(), FNotThreadSafeNotCheckedDelegateUserPolicy>;
-bool operator==(const FEasySyncDelegate& Left, const FEasySyncDelegate& Right);
 uint32 GetTypeHash(const FEasySyncDelegate& Key);
 
 DECLARE_DYNAMIC_DELEGATE(FEasySyncDynamicDelegate);
