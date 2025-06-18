@@ -44,6 +44,7 @@ public:
 
 
 struct FEasySyncEntry;
+class FNativeGameplayTag;
 
 struct EASYSYNCHRONIZER_API FEasySyncKey
 {

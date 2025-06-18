@@ -260,7 +260,7 @@ void UEasySyncSubsystem::RegisterEntry(TSharedPtr<FEasySyncEntry> SyncEntry)
 
 	EntriesSet.Add(SyncEntry);
 
-	for (auto& WeakSyncKey : SyncEntry->GetKeys())
+	for (const auto& WeakSyncKey : SyncEntry->GetKeys())
 	{
 		const auto SyncKey = WeakSyncKey.Pin();
 		if (!SyncKey) continue;
@@ -311,7 +311,7 @@ void UEasySyncSubsystem::RemoveEntry(TSharedPtr<FEasySyncEntry>&& SyncEntry)
 		return;
 	}
 
-	for (auto& WeakSyncKey : SyncEntry->GetKeys())
+	for (const auto& WeakSyncKey : SyncEntry->GetKeys())
 	{
 		const auto SyncKey = WeakSyncKey.Pin();
 
@@ -343,7 +343,7 @@ void UEasySyncSubsystem::BroadcastTag(const FGameplayTag& Tag)
 	for (const auto& SubTag : TagParents)
 	{
 		const auto SyncKeys = GetSyncKeysByTag(SubTag);
-		for (const auto WeakSyncKey : SyncKeys)
+		for (const auto& WeakSyncKey : SyncKeys)
 		{
 			const auto TagSyncKey = WeakSyncKey.Pin();
 			if (!TagSyncKey || TagSyncKey->IsPassed()) continue;
@@ -370,7 +370,7 @@ void UEasySyncSubsystem::BroadcastTagWithOwner(UObject* TagOwner, const FGamepla
 	TArray<TWeakPtr<FEasySyncKey>> WeakConditionOwnedSyncKeys;
 	Hash_OwnedSyncTags.MultiFind(GetTypeHash(FOwnedGameplayTag(TagOwner, Tag)), WeakConditionOwnedSyncKeys);
 
-	for (const auto WeakSyncKey : WeakConditionOwnedSyncKeys)
+	for (const auto& WeakSyncKey : WeakConditionOwnedSyncKeys)
 	{
 		const auto OwnedTagSyncKey = WeakSyncKey.Pin();
 		if (!OwnedTagSyncKey) continue;
